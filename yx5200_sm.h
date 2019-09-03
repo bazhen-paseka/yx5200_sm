@@ -9,7 +9,7 @@ typedef struct
 } yx5200_struct;
 
 void yx5200_init (yx5200_struct *yx5200_handler);
-void yx5200_play_with_index (yx5200_struct *yx5200_handler, uint8_t song_index_u8);
+void yx5200_play_with_index (yx5200_struct *yx5200_handler, uint16_t song_index_u16);
 
 #endif // YX5200_SM_H_INCLUDED
 
@@ -43,7 +43,7 @@ void yx5200_play_with_index (yx5200_struct *yx5200_handler, uint8_t song_index_u
 // 9	->	EF is end code
 
 //After power up, you should send the command [Select device] first. Serial MP3 Player
-//only supports micro sd card, so you should send “ 7E FF 06 09 00 00 02 EF ”.
+//only supports micro sd card, so you should send 7E FF 06 09 00 00 02 EF
 
 //Then you can send the command [Play with index] to play some song
 //7E FF 06 03 00 00 01 EF Play the first song
