@@ -26,7 +26,7 @@ void yx5200_init(yx5200_struct *yx5200_handler)
 	HAL_UART_Transmit(yx5200_handler->uart, (uint8_t *)UART_buffer, UART_BUFFER_SIZE, 100);
 }
 
-void yx5200_play_with_index(yx5200_struct *yx5200_handler, uint8_t song_index_u8)
+void yx5200_play_with_index(yx5200_struct *yx5200_handler, uint16_t song_index_u16)
 {
 	HAL_Delay(200);
 	do
@@ -36,7 +36,9 @@ void yx5200_play_with_index(yx5200_struct *yx5200_handler, uint8_t song_index_u8
 	while (_yx5200_free(*yx5200_handler) == 0);
 
 	uint8_t UART_buffer[UART_BUFFER_SIZE] = {0x7E, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0xEF};
-	UART_buffer[6] = (char)song_index_u8;
+
+	UART_buffer[5] = (uint8_t)(song_index_u16>>8);
+	UART_buffer[6] = (uint8_t)(song_index_u16 & 0xFF);
 	HAL_UART_Transmit(yx5200_handler->uart, (uint8_t *)UART_buffer, UART_BUFFER_SIZE, 100);
 }
 
