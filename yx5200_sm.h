@@ -19,6 +19,7 @@
 */
 	#include "main.h"
 	#include "local_config.h"
+	#include "debug_gx.h"
 /*
 **************************************************************************
 *								    DEFINES
