@@ -1,48 +1,127 @@
-#include "stm32f1xx_hal.h"
-#include "yx5200_sm.h"
+/**
+* \version 1.0
+* \author Bazhen.Ele
+* \date 16-II-2026
+*************************************************************************************
+* \copyright	Bazhen Levkovets
+* \copyright	Brovary Kyiv Ukraine
+* \copyright	bazhen.paseka@gmail.com
+*************************************************************************************
+*/
 
-#define UART_BUFFER_SIZE 8
+/*
+**************************************************************************
+*							INCLUDE FILES
+**************************************************************************
+*/
+	#include "yx5200_sm.h"
+/*
+**************************************************************************
+*							LOCAL DEFINES
+**************************************************************************
+*/
 
-uint8_t _yx5200_free (yx5200_struct yx5200_handler);
+/*
+**************************************************************************
+*							LOCAL CONSTANTS
+**************************************************************************
+*/
 
-void yx5200_init(yx5200_struct *yx5200_handler)
-{
-	if (yx5200_handler == NULL)
-	{
-		return;
-	}
+/*
+**************************************************************************
+*						    LOCAL DATA TYPES
+**************************************************************************
+*/
 
-	HAL_GPIO_WritePin(yx5200_handler->busy_port, yx5200_handler->busy_pin, GPIO_PIN_RESET);
+/*
+**************************************************************************
+*							  LOCAL TABLES
+**************************************************************************
+*/
 
-	GPIO_InitTypeDef yx5200_gpio = {0};
-	yx5200_gpio.Pull = GPIO_PULLUP;
-	yx5200_gpio.Mode = GPIO_MODE_INPUT;
-	yx5200_gpio.Speed = GPIO_SPEED_FREQ_LOW;
+/*
+**************************************************************************
+*								 MACRO'S
+**************************************************************************
+*/
 
-	yx5200_gpio.Pin = yx5200_handler->busy_pin;
-	HAL_GPIO_Init(yx5200_handler->busy_port, &yx5200_gpio);
+/*
+**************************************************************************
+*						 LOCAL GLOBAL VARIABLES
+**************************************************************************
+*/
 
-	uint8_t UART_buffer[UART_BUFFER_SIZE] = {0x7E, 0xFF, 0x06, 0x09, 0x00, 0x00, 0x02, 0xEF};
-	HAL_UART_Transmit(yx5200_handler->uart, (uint8_t *)UART_buffer, UART_BUFFER_SIZE, 100);
-}
+/*
+**************************************************************************
+*                        LOCAL FUNCTION PROTOTYPES
+**************************************************************************
+*/
 
-void yx5200_play_with_index(yx5200_struct *yx5200_handler, uint16_t song_index_u16)
-{
-	HAL_Delay(200);
-	do
-	{
-		HAL_Delay(100);
-	}
-	while (_yx5200_free(*yx5200_handler) == 0);
+	GPIO_PinState 	_yx5200_free 		(yx5200_struct yx5200_handler);
+	uint16_t 		_yx5200_CheckSum 	(uint8_t* _buffer, uint8_t _buffer_size);
 
-	uint8_t UART_buffer[UART_BUFFER_SIZE] = {0x7E, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0xEF};
+/*
+**************************************************************************
+*                           GLOBAL FUNCTIONS
+**************************************************************************
+*/
 
-	UART_buffer[5] = (uint8_t)(song_index_u16>>8);
-	UART_buffer[6] = (uint8_t)(song_index_u16 & 0xFF);
-	HAL_UART_Transmit(yx5200_handler->uart, (uint8_t *)UART_buffer, UART_BUFFER_SIZE, 100);
-}
+void MP3_YX5200_Init(yx5200_struct *yx5200_handler) {
+	if (yx5200_handler == NULL) { return; }
 
-uint8_t _yx5200_free (yx5200_struct yx5200_handler)
-{
+	#define MP3_INIT_SIZE	8
+	uint8_t mp3_init[MP3_INIT_SIZE] = {0x7E, 0xFF, 0x06, 0x09, 0x00, 0x00, 0x02, 0xEF};
+	HAL_UART_Transmit(yx5200_handler->uart, mp3_init, MP3_INIT_SIZE, 100);
+} //**************************************************************************
+
+void MP3_YX5200_Play_with_index(yx5200_struct *yx5200_handler, uint16_t song_index_u16) {
+	if (yx5200_handler == NULL) { return; }
+
+	#define MP3_BUFFER_SIZE 10
+	uint8_t mp3_buffer[MP3_BUFFER_SIZE] = {0x7E, 0xFF, 0x06, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF};
+	mp3_buffer[5] = (uint8_t)(song_index_u16>>8);
+	mp3_buffer[6] = (uint8_t)(song_index_u16 & 0xFF);
+	uint16_t check_sum = _yx5200_CheckSum(mp3_buffer, MP3_BUFFER_SIZE);
+	mp3_buffer[7] = (uint8_t)(check_sum>>8);
+	mp3_buffer[8] = (uint8_t)(check_sum & 0xFF);
+
+	DBG1("\r\n%04d ", song_index_u16);
+	do {
+		HAL_Delay(10); DBG1("-"); fflush(stdout);
+	} while (_yx5200_free(*yx5200_handler) == GPIO_PIN_RESET);
+
+	HAL_UART_Transmit(yx5200_handler->uart, mp3_buffer, MP3_BUFFER_SIZE, 100);
+
+	HAL_Delay(300);
+	do {
+		HAL_Delay(30); DBG1("."); fflush(stdout);
+	} while (_yx5200_free(*yx5200_handler) == GPIO_PIN_RESET);
+} //**************************************************************************
+
+/*
+**************************************************************************
+*                           LOCAL FUNCTIONS
+**************************************************************************
+*/
+
+GPIO_PinState _yx5200_free (yx5200_struct yx5200_handler) {
 	return HAL_GPIO_ReadPin(yx5200_handler.busy_port, yx5200_handler.busy_pin);
-}
+} //**************************************************************************
+
+uint16_t _yx5200_CheckSum (uint8_t* _buffer, uint8_t _buffer_size) {
+	uint16_t check_sum = 0;
+	for (int i=1; i<(_buffer_size-3); i++) {
+		check_sum = check_sum + _buffer[i];
+	}
+	check_sum = 0xFFFF - check_sum + 1;
+	return check_sum;
+} //**************************************************************************
+
+//**************************************************************************
+//**************************************************************************
+
+/*
+**************************************************************************
+*                             	END
+**************************************************************************
+*/
